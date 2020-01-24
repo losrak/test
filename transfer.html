@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>Transfer</title>
+	<link rel="stylesheet" href="css/uikit.min.css">
+	<link rel="stylesheet" href="css/theme.css">
+	<script src="js/uikit.min.js"></script>
+	<script src="js/uikit-icons.min.js"></script>
+	<script src="js/scripts.js"></script>
+	<script src="js/calls.js"></script>
+</head>
+<body>
+	<div class="menu uk-margin-large-bottom">
+		<nav class="uk-navbar-container uk-navbar" uk-navbar>
+		    <div class="uk-navbar-left">
+		        <ul class="uk-navbar-nav">
+		            <li><a href="#">Company</a></li>
+		            <li><a href="panel.html">Home</a></li>
+		            <li class="uk-active"><a href="transfer.html">Transfer</a></li>
+		        </ul>
+		    </div>
+		    <div class="uk-navbar-right">
+		    	<ul class="uk-navbar-nav">
+		            <li><a href="#" onclick="logout()">Log Out</a></li>
+		        </ul>
+		    </div>
+		</nav>
+	</div>
+
+	<div class="uk-container">
+		<div class="uk-grid" uk-grid>
+			<div class="uk-width-1-3@m">
+				<div class="uk-card uk-card-default uk-card-hover uk-card-body">
+					<h3>Create new transfer</h3>
+					<form action="">
+						<fieldset class="uk-fieldset">
+							<legend class="uk-legend">Select origin account</legend>
+							<div class="uk-margin">
+						        <div>
+						            <select id="origenSelect" class="uk-select">
+						            </select>
+						        </div>
+						    </div>
+
+
+					        <legend class="uk-legend">Destination account</legend>
+							<div class="uk-margin">
+					            <input id="cuentaDestino" name="cuentaDestino" maxlength="8" class="uk-input" type="text" placeholder="Cuenta Destino">
+					        </div>
+					        <legend class="uk-legend">Amount</legend>
+							<div class="uk-margin">
+					            <input id="monto" name="monto" class="uk-input" type="text" placeholder="0">
+					        </div>
+					        <div class="uk-margin uk-text-right">
+					        	<button id="transfer" class="uk-button blue" onclick="hacerTransferencia()">Transfer</button>
+					        	<button id="cancel" class="uk-button" onclick="cancelarTransferencia()">Cancel</button>
+					        </div>
+						</fieldset>
+					</form>
+				</div>
+			</div>
+			
+			<div class="uk-width-2-3@m">
+				<div id="chartdiv"></div>
+			</div>
+			
+		</div>
+		<div class="uk-grid" uk-grid>
+			<div class="uk-width-1-1@m uk-margin-large-bottom" id="tables">
+				
+			</div>
+		</div>
+	</div>
+
+
+
+	<div id="modalTransferencia" uk-modal>
+	    <div class="uk-modal-dialog">
+	        <button class="uk-modal-close-default" type="button" uk-close></button>
+	        <div class="uk-modal-header">
+	            <h2 class="uk-modal-title"><span class="icon-red" uk-icon="warning"></span> Monto elevado</h2>
+	        </div>
+	        <div class="uk-modal-body">
+	            <p>El monto a transferir es demasiado grande o tienes fondos insuficientes</p>
+	            <p>Debe ser menor a 100,000</p>
+	        </div>
+	        <div class="uk-modal-footer uk-text-right">
+	            
+	        </div>
+	    </div>
+	</div>
+		
+	<script src="https://www.amcharts.com/lib/4/core.js"></script>
+	<script src="https://www.amcharts.com/lib/4/charts.js"></script>
+	<script src="https://www.amcharts.com/lib/4/themes/animated.js"></script>
+	<script src="js/chart.js"></script>
+
+	<script>
+		//obtiene el historial y lo dibuja
+		var rq = obtenerHistorial();
+		const contenedor = document.getElementById('tables');
+		var nTables = [];
+		rq.onload = function() {
+			var data = JSON.parse(this.response);
+			//console.log(data);
+			if (rq.status >= 200 && rq.status < 400) {
+				
+				var _tranArray = [];
+				// obtiene las cuentas unicas para saber cuantas tablas se van a crear
+				data.transactions.forEach( element => {
+					if(localStorage.getItem("toAccounts") === null){
+						var _transactions = new Object();
+						_transactions.fromAccount = element.fromAccount;
+						_transactions.toAccount = element.toAccount;
+						_transactions.sentAt = formatDate(element.sentAt);
+						_transactions.currency = element.amount.currency;
+						_transactions.value = element.amount.value;
+						_tranArray.push(_transactions);
+					}
+						
+					nTables.push(element.fromAccount);
+				});
+				var unicos = new Set(nTables);
+				if(localStorage.getItem("toAccounts") === null)
+					localStorage.setItem("toAccounts", JSON.stringify(_tranArray));
+
+				// Construye tablas y agrupa los datos por cuenta
+				for (let item of unicos){
+					var table = document.createElement('table');
+					table.setAttribute('class', 'uk-table uk-table-divider uk-table-striped uk-table-hover uk-text-center');
+					table.setAttribute('id', item);
+					var thead = document.createElement('thead');
+					var tr = document.createElement('tr');
+					var th = document.createElement('th');
+					th.setAttribute('class', 'uk-text-center');
+					var th2 = document.createElement('th');
+					th2.setAttribute('class', 'uk-text-center');
+					var th3 = document.createElement('th');
+					th3.setAttribute('class', 'uk-text-center');
+					var th4 = document.createElement('th');
+					th4.setAttribute('class', 'uk-text-center');
+					th.textContent = 'Origin account';
+					tr.appendChild(th);
+					th2.textContent = 'Destination account';
+					tr.appendChild(th2);
+					th3.textContent = 'Transfer date';
+					tr.appendChild(th3);
+					th4.textContent = 'Amount';
+					tr.appendChild(th4);
+					thead.appendChild(tr);
+					table.appendChild(thead);
+					
+					/** recorre los datos para anexarlos en la tabla correspondiente **/
+					data.transactions.forEach(current => {
+						if(item == current.fromAccount){
+							var tr = document.createElement('tr');
+					    	var origin = document.createElement('td');
+					    	var destination = document.createElement('td');
+					    	var transferDate = document.createElement('td');
+					    	var amount = document.createElement('td');
+
+				    		origin.textContent = current.fromAccount;
+				    		destination.textContent = current.toAccount;
+				    		transferDate.textContent = formatDate(current.sentAt);
+				    		amount.textContent = current.amount.currency + current.amount.value;
+
+
+					    	tr.appendChild(origin);
+					    	tr.appendChild(destination);
+					    	tr.appendChild(transferDate);
+					    	tr.appendChild(amount);
+					    	table.appendChild(tr);
+						}
+					})
+					contenedor.appendChild(table);
+				}
+			} else {
+				console.log('error')
+			}
+			var data = JSON.parse(this.response);
+			
+		}
+
+
+		//trae los datos de cuentas para agregarlos en el select de cuentas de origen
+		const origenSelect = document.getElementById('origenSelect');
+		var rqst = obtenerBalance();
+		rqst.onload = function() {
+			var data = JSON.parse(this.response);
+			if (rqst.status >= 200 && rqst.status < 400) {
+			    data.balance.forEach(current => {
+			    	var opt = document.createElement('option');
+			    	opt.setAttribute("value", current.account);
+			    	opt.textContent = "*****"+current.account.toString().slice(-4);
+			    	origenSelect.appendChild(opt);
+			    })
+			} else {
+				console.log('error')
+			}
+		}
+
+
+	</script>
+
+</body>
+</html>

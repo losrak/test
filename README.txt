@@ -1,6 +1,4 @@
-author: Juan Carlos Tellez
 date: 16-01-2020
-email: juanc.tellez@gmail.com
 
 What is this?
 	This App simulate a banking panel for a client. The user can consult balance, transfer money from his accounts to other accounts
